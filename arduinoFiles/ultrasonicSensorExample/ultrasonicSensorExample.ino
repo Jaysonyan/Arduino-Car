@@ -1,3 +1,4 @@
+#include "PololuWheelEncoders.h"
 #include <NewPing.h>
 
 #define MAX_RANGE 200
