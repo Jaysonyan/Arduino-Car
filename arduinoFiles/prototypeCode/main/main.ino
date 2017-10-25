@@ -51,6 +51,23 @@ void rotate(startRotate){
   }
 }
 
+void moveTo(){
+  int initSteps = encoders_get_counts_m1();
+  int distance = (sonar[0].ping_cm() + sonar[1].ping_cm())/2;
+  int numSteps = (int)(distance/INCRE);
+  int finalSteps = initSteps+numSteps;
+  while(encoder_get_counts_m1() != finalSteps){
+    digitalWrite(12, HIGH); //running
+    digitalWrite(9, LOW);  
+    analogWrite(3, 255);   
+    digitalWrite(13, HIGH); 
+    digitalWrite(8, LOW);   
+    analogWrite(11, 255);   
+  }
+  digitalWrite(9,HIGH);//braking
+  digitalWrite(8,HIGH);
+}
+
 void setup() {
   Serial.begin(9600);
   //Setup Channel A
