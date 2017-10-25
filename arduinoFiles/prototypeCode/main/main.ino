@@ -19,6 +19,21 @@ NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE),
 NewPing(SENSOR2_TRIG, SENSOR2_ECHO, MAX_RANGE)
 };
 
+int objectInFront(int sensor){
+  int count = 0;
+  for(int i = 0;i < 5; i++){
+    if(sonar[sensor].ping_cm()!=0){
+      count++;
+    }
+  }
+  if(count >= 2){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
+
 void setLed(int green, int red, int blue){
   digitalWrite(LED_GREEN, green);
   digitalWrite(LED_RED, red);

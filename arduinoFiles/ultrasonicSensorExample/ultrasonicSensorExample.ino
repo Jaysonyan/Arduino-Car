@@ -6,23 +6,29 @@
 #define SENSOR1_ECHO 10
 //#define SENSOR2_TRIG 7
 //#define SENSOR2_ECHO 6
-//#define LED_GREEN 13
-//#define LED_RED 12
-//#define LED_BLUE 11
-#define ENCODER_1A = 2
-#define ENCODER_1B = 4
-#define ENCODER_2A = 5
-#define ENCODER_2B = 6
+#define ENCODER_1A 2
+#define ENCODER_1B 4
+#define ENCODER_2A 5
+#define ENCODER_2B 6
 
 NewPing sonar[2]={
 NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE),
-NewPing(SENSOR2_TRIG, SENSOR2_ECHO, MAX_RANGE)
+NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE)
 };
 
-void setLed(int green, int red, int blue){
-  digitalWrite(LED_GREEN, green);
-  digitalWrite(LED_RED, red);
-  digitalWrite(LED_BLUE, blue);
+int objectInFront(int sensor){
+  int count = 0;
+  for(int i = 0;i < 5; i++){
+    if(sonar[sensor].ping_cm()!=0){
+      count++;
+    }
+  }
+  if(count >= 2){
+    return 1;
+  }
+  else{
+    return 0;
+  }
 }
 
 void printSensorData(){
@@ -38,19 +44,6 @@ void printSensorData(){
   delay(33);
 }
 
-
-void rotate(startRotate){
-  while(encoders_get_counts_m1() < startRotate+1 && encoders_get_counts_m2() > startRotate-1){
-    digitalWrite(12, HIGH); //Establishes forward direction of Channel A
-    digitalWrite(9, LOW);   //Disengage the Brake for Channel A
-    analogWrite(3, 123);   
-    
-    digitalWrite(13, LOW);  //Establishes backward direction of Channel B
-    digitalWrite(8, LOW);   //Disengage the Brake for Channel B
-    analogWrite(11, 123);   
-  }
-}
-
 void setup() {
   Serial.begin(9600);
   //Setup Channel A
@@ -63,7 +56,7 @@ void setup() {
 }
  
 void loop() {
-  printSensorData();
+  Serial.println(objectInFront(0));
 
   delay(33);
 }
