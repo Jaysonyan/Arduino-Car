@@ -9,6 +9,7 @@
 #define LED_GREEN 13
 #define LED_RED 12
 #define LED_BLUE 11
+#define INCRE 1.0995574
 
 NewPing sonar[2]={
 NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE),
@@ -32,6 +33,23 @@ void printSensorData(){
   Serial.print(" cm");
   Serial.println();
   delay(33);
+}
+
+void MoveTo(){
+  int initSteps = encoders_get_counts_m1();
+  int distance = (sonar[0].ping_cm() + sonar[1].ping_cm())/2;
+  int numSteps = (int)(distance/INCRE);
+  int finalSteps = initSteps+numSteps;
+  while(encoder_get_counts_m1() != numsteps){
+    digitalWrite(12, HIGH); //running
+    digitalWrite(9, LOW);  
+    analogWrite(3, 255);   
+    digitalWrite(13, HIGH); 
+    digitalWrite(8, LOW);   
+    analogWrite(11, 255);   
+  }
+  digitalWrite(9,HIGH);//braking
+  digitalWrite(8,HIGH);
 }
 
 void setup() {
