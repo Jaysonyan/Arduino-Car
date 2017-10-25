@@ -1,22 +1,20 @@
-#include "PololuWheelEncoders.h"
+#include <PololuWheelEncoders.h>
 #include <NewPing.h>
 
+#define INCRE 1.0995574
 #define MAX_RANGE 200
 #define SENSOR1_TRIG 7
 #define SENSOR1_ECHO 10
 //#define SENSOR2_TRIG 7
 //#define SENSOR2_ECHO 6
-//#define LED_GREEN 13
-//#define LED_RED 12
-//#define LED_BLUE 11
-#define ENCODER_1A = 2
-#define ENCODER_1B = 4
-#define ENCODER_2A = 5
-#define ENCODER_2B = 6
+#define ENCODER_1A 2
+#define ENCODER_1B 4
+#define ENCODER_2A 5
+#define ENCODER_2B 6
 
 NewPing sonar[2]={
 NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE),
-NewPing(SENSOR2_TRIG, SENSOR2_ECHO, MAX_RANGE)
+NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE)
 };
 
 int objectInFront(int sensor){
@@ -34,12 +32,6 @@ int objectInFront(int sensor){
   }
 }
 
-void setLed(int green, int red, int blue){
-  digitalWrite(LED_GREEN, green);
-  digitalWrite(LED_RED, red);
-  digitalWrite(LED_BLUE, blue);
-}
-
 void printSensorData(){
   Serial.print("Ping1: ");
   Serial.print(sonar[0].ping_cm());
@@ -54,7 +46,7 @@ void printSensorData(){
 }
 
 
-void rotate(startRotate){
+void rotate(int startRotate){
   while(encoders_get_counts_m1() < startRotate+1 && encoders_get_counts_m2() > startRotate-1){
     digitalWrite(12, HIGH); //Establishes forward direction of Channel A
     digitalWrite(9, LOW);   //Disengage the Brake for Channel A
@@ -66,7 +58,7 @@ void rotate(startRotate){
   }
 }
 
-void moveTo(){
+/*void moveTo(){
   int initSteps = encoders_get_counts_m1();
   int distance = (sonar[0].ping_cm() + sonar[1].ping_cm())/2;
   int numSteps = (int)(distance/INCRE);
@@ -81,7 +73,7 @@ void moveTo(){
   }
   digitalWrite(9,HIGH);//braking
   digitalWrite(8,HIGH);
-}
+}*/
 
 void setup() {
   Serial.begin(9600);
@@ -95,7 +87,7 @@ void setup() {
 }
  
 void loop() {
-  printSensorData();
+  Serial.println(encoder_get_counts_m1());
 
   delay(33);
 }
