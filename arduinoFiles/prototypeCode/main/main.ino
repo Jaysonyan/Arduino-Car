@@ -1,8 +1,9 @@
+
 #include <PololuWheelEncoders.h>
 #include <NewPing.h>
 
 #define INCRE 1.0995574
-#define MAX_RANGE 200
+#define MAX_RANGE 50
 #define SENSOR1_TRIG 7
 #define SENSOR1_ECHO 10
 //#define SENSOR2_TRIG 7
@@ -46,8 +47,8 @@ void printSensorData(){
 }
 
 
-void rotate(int startRotate){
-  while(encoders_get_counts_m1() < startRotate+1 && encoders_get_counts_m2() > startRotate-1){
+void rotate(int startRotate1, int startRotate2){
+  while(encoders_get_counts_m1() < startRotate1+10 && encoders_get_counts_m2() > startRotate2-10){
     digitalWrite(12, HIGH); //Establishes forward direction of Channel A
     digitalWrite(9, LOW);   //Disengage the Brake for Channel A
     analogWrite(3, 123);   
@@ -56,14 +57,20 @@ void rotate(int startRotate){
     digitalWrite(8, LOW);   //Disengage the Brake for Channel B
     analogWrite(11, 123);   
   }
+  digitalWrite(9, HIGH);   //Disengage the Brake for Channel A
+  
+  digitalWrite(8, HIGH);   //Disengage the Brake for Channel B
 }
 
-/*void moveTo(){
-  int initSteps = encoders_get_counts_m1();
-  int distance = (sonar[0].ping_cm() + sonar[1].ping_cm())/2;
+void moveTo(){
+  int initSteps = encoders_get_counts_m2();
+  int distance = (sonar[0].ping_cm());
   int numSteps = (int)(distance/INCRE);
+  Serial.println(numSteps);
   int finalSteps = initSteps+numSteps;
-  while(encoder_get_counts_m1() != finalSteps){
+  Serial.println(finalSteps);
+  while(encoders_get_counts_m2() < finalSteps){
+    Serial.println(encoders_get_counts_m2());
     digitalWrite(12, HIGH); //running
     digitalWrite(9, LOW);  
     analogWrite(3, 255);   
@@ -73,7 +80,7 @@ void rotate(int startRotate){
   }
   digitalWrite(9,HIGH);//braking
   digitalWrite(8,HIGH);
-}*/
+}
 
 void setup() {
   Serial.begin(9600);
@@ -87,7 +94,11 @@ void setup() {
 }
  
 void loop() {
-  Serial.println(encoder_get_counts_m1());
-
-  delay(33);
+  while(!objectInFront(0)){
+    rotate(encoders_get_counts_m1(),encoders_get_counts_m2());
+    delay(100);
+  }
+  Serial.println("Object Found");
+  moveTo();
+  delay(10000000);
 }
