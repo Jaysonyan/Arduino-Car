@@ -48,14 +48,14 @@ void printSensorData(){
 
 
 void rotate(int startRotate1, int startRotate2){
-  while(encoders_get_counts_m1() < startRotate1+10 && encoders_get_counts_m2() > startRotate2-10){
+  while(encoders_get_counts_m1() < startRotate1+1 && encoders_get_counts_m2() > startRotate2-1){
     digitalWrite(12, HIGH); //Establishes forward direction of Channel A
     digitalWrite(9, LOW);   //Disengage the Brake for Channel A
-    analogWrite(3, 123);   
+    analogWrite(3, 75);   
     
     digitalWrite(13, LOW);  //Establishes backward direction of Channel B
     digitalWrite(8, LOW);   //Disengage the Brake for Channel B
-    analogWrite(11, 123);   
+    analogWrite(11,75);   
   }
   digitalWrite(9, HIGH);   //Disengage the Brake for Channel A
   
@@ -70,13 +70,12 @@ void moveTo(){
   int finalSteps = initSteps+numSteps;
   Serial.println(finalSteps);
   while(encoders_get_counts_m2() < finalSteps){
-    Serial.println(encoders_get_counts_m2());
     digitalWrite(12, HIGH); //running
     digitalWrite(9, LOW);  
-    analogWrite(3, 255);   
+    analogWrite(3, 75);   
     digitalWrite(13, HIGH); 
     digitalWrite(8, LOW);   
-    analogWrite(11, 255);   
+    analogWrite(11, 75);   
   }
   digitalWrite(9,HIGH);//braking
   digitalWrite(8,HIGH);
@@ -94,11 +93,19 @@ void setup() {
 }
  
 void loop() {
-  while(!objectInFront(0)){
-    rotate(encoders_get_counts_m1(),encoders_get_counts_m2());
+  while(1){
+    digitalWrite(12, HIGH); //running
+    digitalWrite(9, LOW);  
+    analogWrite(3, 75);   
+    digitalWrite(13, HIGH); 
+    digitalWrite(8, LOW);   
+    analogWrite(11, 75);
+    delay(10); 
+    while(!objectInFront(0)){
+      rotate(encoders_get_counts_m1(),encoders_get_counts_m2());
+    }
     delay(100);
+    moveTo();
+    delay(10);
   }
-  Serial.println("Object Found");
-  moveTo();
-  delay(10000000);
 }
