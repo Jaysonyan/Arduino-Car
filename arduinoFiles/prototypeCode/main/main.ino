@@ -2,9 +2,10 @@
 #include <NewPing.h>
 #include <math.h>
 
-#define INCRE 0.37
+//
+#define INCRE 3
 
-#define MAX_RANGE 200
+#define MAX_RANGE 50
 
 #define SENSOR1_TRIG 7
 #define SENSOR1_ECHO 10
@@ -27,7 +28,7 @@ void movingAverage(float inputValue, float *previousMovingAverage, float *previo
 }
 
 void takeMovingAverageInArray(int a[], int n){
-  int *t = malloc(n*sizeof(int));
+  int *t = (int*)malloc(n*sizeof(int));
   for(int i = 0; i < n; i++){
     t[i] = (a[i] + a[(i+1)%n] + a[(i-1+n)%n])/3;
   }
@@ -58,7 +59,7 @@ int* rotate(float angle, int speed, bool direction, bool scan){
   int startE2 = encoders_get_counts_m2();
   int currentE1, currentE2;
 
-  int *distance = malloc((int)(angle/360.0 * MEASURED_ENCODER_FULL_TURN) * sizeof(int));
+  int *distance = (int *)malloc((int)(angle/360.0 * MEASURED_ENCODER_FULL_TURN) * sizeof(int));
   for(int i = 0; i < ((int)(angle/360.0 * MEASURED_ENCODER_FULL_TURN)); i++){
     distance[i] = 0;
   }
@@ -92,7 +93,7 @@ int* rotate(float angle, int speed, bool direction, bool scan){
 }
 
 void moveTo(int speed, int distance){
-  int numSteps = (int)(distance/INCRE);
+  int numSteps = (int)(distance*INCRE);
   
   int startE1 = encoders_get_counts_m1();
   int startE2 = encoders_get_counts_m2();
@@ -127,46 +128,47 @@ void setup() {
 }
 
 void loop() {
-  while(sonar.ping_cm() > 6){
-    int *distance;
-    do{
-      free(distance);
-      distance = NULL;
-      distance = rotate(360, 60, true, true);
-      delay(1000);
-    } while(findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN) == -1);
-    
-    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
-      if(distance[i] == 0){
-        distance[i] = MAX_RANGE;
-      }
-    }
-    
-    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
-      Serial.print(distance[i]);
-      Serial.print(",");
-    }
-    Serial.println();
-    takeMovingAverageInArray(distance, MEASURED_ENCODER_FULL_TURN);
-    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
-      Serial.print(distance[i]);
-      Serial.print(",");
-    }
-    Serial.println();
-    int minIndex = findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN);
-    Serial.println(minIndex);
-    Serial.println(((float)(MEASURED_ENCODER_FULL_TURN - minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0);
-    float rotationRequired = ((float)(minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0;
-    rotate(360.0 - rotationRequired, 60, false, false);
-    
-    delay(1000);
-    
-    moveTo(60, distance[minIndex]/2);
-    
-    
+  int *distance;
+  do{
     free(distance);
     distance = NULL;
-    
+    distance = rotate(360, 60, true, true);
     delay(1000);
+  } while(findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN) == -1);
+  
+  for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+    if(distance[i] == 0){
+      distance[i] = MAX_RANGE;
+    }
   }
+  
+  for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+    Serial.print(distance[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  takeMovingAverageInArray(distance, MEASURED_ENCODER_FULL_TURN);
+  for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+    Serial.print(distance[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  int minIndex = findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN);
+  Serial.println(minIndex);
+  Serial.println(distance[minIndex]);
+  Serial.println(((float)(MEASURED_ENCODER_FULL_TURN - minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0);
+  float rotationRequired = ((float)(minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0;
+  rotate(360.0 - rotationRequired, 60, false, false);
+  delay(1000);
+  int betterDistance = sonar.ping_cm();
+  moveTo(60, max(betterDistance,distance[minIndex]));
+  Serial.print(betterDistance);
+  free(distance);
+  distance = NULL;
+  
+  delay(10000);
+  /*
+  moveTo(60, 15);
+  delay(10000);
+  */
 }
