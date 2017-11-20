@@ -1,105 +1,117 @@
-//Final Prototype
 #include <PololuWheelEncoders.h>
 #include <NewPing.h>
 #include <math.h>
 
-#define INCRE 1.0995574
+#define INCRE 0.37
+
 #define MAX_RANGE 200
+
 #define SENSOR1_TRIG 7
 #define SENSOR1_ECHO 10
-//#define SENSOR2_TRIG 7
-//#define SENSOR2_ECHO 6
+
 #define ENCODER_1A 2
 #define ENCODER_1B 4
 #define ENCODER_2A 5
 #define ENCODER_2B 6
 
-NewPing sonar[2]={
-NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE),
-NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE)
-};
+#define FORGETTING_FACTOR 0.9
+#define SPEED_ADJUST_MULTIPLIER 5
+#define MEASURED_ENCODER_FULL_TURN 108.0
 
-void movingAverage(float inputValue, float *previousMovingAverage, const float forgettingFactor){
-    float currentMovingAverage = (*previousMovingAverage)*forgettingFactor + inputValue; //Calculate Current Moving Average
+NewPing sonar = NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE);
+
+void movingAverage(float inputValue, float *previousMovingAverage, float *previousWeight, const float forgettingFactor){
+    float currentMovingAverage = (*previousMovingAverage*forgettingFactor*(*previousWeight) + inputValue)/(forgettingFactor*(*previousWeight) + 1); //Calculate Current Moving Average
     *previousMovingAverage = currentMovingAverage; //Sets value of Previous Moving Average pointer to Current Moving Average
+    *previousWeight = forgettingFactor*(*previousWeight) + 1.0; //Sets value of Previous Weight pointer to Current Weight
 }
 
-int objectInFront(int sensor){
-  int count = 0;
-  for(int i = 0;i < 5; i++){
-    if(sonar[sensor].ping_cm()!=0){
-      count++;
+void takeMovingAverageInArray(int a[], int n){
+  int *t = malloc(n*sizeof(int));
+  for(int i = 0; i < n; i++){
+    t[i] = (a[i] + a[(i+1)%n] + a[(i-1+n)%n])/3;
+  }
+  for(int i = 0; i < n; i++){
+    a[i] = t[i];
+  }
+  free(t);
+  t = NULL;
+}
+
+int findIndexOfLowestNonZero(int a[], int n){
+  int minIndex = -1;
+  for(int i = 0; i < n; i++){
+    if(a[i] != 0){
+      if(minIndex == -1 || a[i] < a[minIndex]){
+        minIndex = i;
+      }
     }
   }
-  if(count >= 2){
-    return 1;
-  }
-  else{
-    return 0;
-  }
-}
-void printSensorData(){
-  Serial.print("Ping1: ");
-  Serial.print(sonar[0].ping_cm());
-  Serial.print(" ");
-  delay(33);
-  Serial.print("cm and ");
-  Serial.print("Ping2: ");
-  Serial.print(sonar[1].ping_cm());
-  Serial.print(" cm");
-  Serial.println();
-  delay(33);
+  return minIndex;
 }
 
-
-void rotate(int startRotate1, int startRotate2){
-  while(encoders_get_counts_m1() < startRotate1+5 && encoders_get_counts_m2() > startRotate2-5){
-    digitalWrite(12, HIGH); //Establishes forward direction of Channel A
-    digitalWrite(9, LOW);   //Disengage the Brake for Channel A
-    analogWrite(3, 75);   
-    
-    digitalWrite(13, LOW);  //Establishes backward direction of Channel B
-    digitalWrite(8, LOW);   //Disengage the Brake for Channel B
-    analogWrite(11,75);   
-  }
-  digitalWrite(9, HIGH);   //Disengage the Brake for Channel A
-  
-  digitalWrite(8, HIGH);   //Disengage the Brake for Channel B
-}
-
-void moveTo(){
-  int initSteps = encoders_get_counts_m2();
-  //int distance = (sonar[0].ping_cm());
-  int distance = 10000;
-  int numSteps = (int)(distance/INCRE);
-  int previousE1, previousE2;
+/*angle in degrees
+speed from 0 to 255
+direction true - clockwise, false - counterclockwise*/
+int* rotate(float angle, int speed, bool direction, bool scan){
+  int startE1 = encoders_get_counts_m1();
+  int startE2 = encoders_get_counts_m2();
   int currentE1, currentE2;
-  Serial.println(numSteps);
-  int finalSteps = initSteps+numSteps;
-  Serial.println(finalSteps);
-  digitalWrite(12, HIGH); //running
-  digitalWrite(9, LOW);  
-  analogWrite(3, 75);   
-  digitalWrite(13, HIGH); 
-  digitalWrite(8, LOW);   
-  analogWrite(11, 75);
-  float currentDeltaE1 = 0;
-  float currentDeltaE2 = 0;
-  previousE1 = encoders_get_counts_m1();
-  previousE2 = encoders_get_counts_m2();
-  while(encoders_get_counts_m2() < finalSteps){
+
+  int *distance = malloc((int)(angle/360.0 * MEASURED_ENCODER_FULL_TURN) * sizeof(int));
+  for(int i = 0; i < ((int)(angle/360.0 * MEASURED_ENCODER_FULL_TURN)); i++){
+    distance[i] = 0;
+  }
+
+  digitalWrite(12, direction ? LOW : HIGH);
+  digitalWrite(13,  direction ? HIGH : LOW);
+  digitalWrite(9, LOW);
+  digitalWrite(8, LOW);
+  
+  while(encoders_get_counts_m1()*(direction ? -1 : 1) < startE1*(direction ? -1 : 1) + (angle/360 * MEASURED_ENCODER_FULL_TURN) 
+  || encoders_get_counts_m2()*(direction ? -1 : 1) > startE2*(direction ? -1 : 1) - (angle/360 * MEASURED_ENCODER_FULL_TURN)){
+    
     currentE1 = encoders_get_counts_m1();
     currentE2 = encoders_get_counts_m2();
-    movingAverage((float)(-previousE1+currentE1), &currentDeltaE1, 0);
-    movingAverage((float)(-previousE2+currentE2), &currentDeltaE2, 0);
-    previousE1 = currentE1;
-    previousE2 = currentE2;
-    analogWrite(3, 75);    
-    analogWrite(11, (currentDeltaE1/currentDeltaE2 > 254 ? 255.0/90.0 : pow(currentDeltaE1/currentDeltaE2,5)) * 90);
-    Serial.print(encoders_get_counts_m1());
-    Serial.println(encoders_get_counts_m2());   
+
+    analogWrite(3, min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE2 - startE2) - abs(currentE1 - startE1)), 255));   
+    analogWrite(11,min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE1 - startE1) - abs(currentE2 - startE2)), 255));
+
+    int currentEncoderChangeMin = min(abs(encoders_get_counts_m1() - startE1),abs(encoders_get_counts_m2() - startE2));
+    distance[currentEncoderChangeMin] = sonar.ping_cm();
   }
-  digitalWrite(9,HIGH);//braking
+  digitalWrite(9, HIGH);
+  digitalWrite(8, HIGH);
+  if(!scan){
+    free(distance);
+    distance = NULL;
+  }
+  else{
+    return distance;
+  }
+}
+
+void moveTo(int speed, int distance){
+  int numSteps = (int)(distance/INCRE);
+  
+  int startE1 = encoders_get_counts_m1();
+  int startE2 = encoders_get_counts_m2();
+  int currentE1, currentE2;
+
+  digitalWrite(12, HIGH);
+  digitalWrite(13, HIGH); 
+  digitalWrite(9, LOW);  
+  digitalWrite(8, LOW);   
+  
+  while(((currentE1 - startE1) + (currentE2 - startE2))/2 < numSteps){
+    currentE1 = encoders_get_counts_m1();
+    currentE2 = encoders_get_counts_m2();
+    
+    analogWrite(3, min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE2 - startE2) - abs(currentE1 - startE1)), 255));   
+    analogWrite(11,min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE1 - startE1) - abs(currentE2 - startE2)), 255));
+  }
+  
+  digitalWrite(9,HIGH);
   digitalWrite(8,HIGH);
 }
 
@@ -113,35 +125,48 @@ void setup() {
   pinMode(8, OUTPUT);  // Brake Channel A pin
   encoders_init(ENCODER_1A, ENCODER_1B, ENCODER_2A, ENCODER_2B);
 }
-int x = 0;
+
 void loop() {
-  Serial.println(sonar[0].ping_cm());
-//  while(!x){
-//    digitalWrite(12, HIGH); //Establishes forward direction of Channel A
-//    digitalWrite(9, LOW);   //Disengage the Brake for Channel A
-//    analogWrite(3, 75);   
-//    
-//    digitalWrite(13, LOW);  //Establishes backward direction of Channel B
-//    digitalWrite(8, LOW);   //Disengage the Brake for Channel B
-//    analogWrite(11,75); 
-//    x = sonar[0].ping_cm();
-//    if(x!=0){
-//      digitalWrite(9, HIGH);
-//      digitalWrite(8, HIGH);
-//    }
-//  }
-//  digitalWrite(12, HIGH); //running
-//  digitalWrite(9, LOW);  
-//  analogWrite(3, 75);   
-//  digitalWrite(13, HIGH); 
-//  digitalWrite(8, LOW);   
-//  analogWrite(11, 75);
-//  delay(10); 
-//  while(!objectInFront(0)){
-//    rotate(encoders_get_counts_m1(),encoders_get_counts_m2());
-//    delay(100);
-//  }
-  delay(100);
-  moveTo();
-  delay(10);
+  while(sonar.ping_cm() > 6){
+    int *distance;
+    do{
+      free(distance);
+      distance = NULL;
+      distance = rotate(360, 60, true, true);
+      delay(1000);
+    } while(findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN) == -1);
+    
+    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+      if(distance[i] == 0){
+        distance[i] = MAX_RANGE;
+      }
+    }
+    
+    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+      Serial.print(distance[i]);
+      Serial.print(",");
+    }
+    Serial.println();
+    takeMovingAverageInArray(distance, MEASURED_ENCODER_FULL_TURN);
+    for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
+      Serial.print(distance[i]);
+      Serial.print(",");
+    }
+    Serial.println();
+    int minIndex = findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN);
+    Serial.println(minIndex);
+    Serial.println(((float)(MEASURED_ENCODER_FULL_TURN - minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0);
+    float rotationRequired = ((float)(minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0;
+    rotate(360.0 - rotationRequired, 60, false, false);
+    
+    delay(1000);
+    
+    moveTo(60, distance[minIndex]/2);
+    
+    
+    free(distance);
+    distance = NULL;
+    
+    delay(1000);
+  }
 }
