@@ -131,20 +131,13 @@ void moveTo(int speed, int distance){
     analogWrite(11,min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE1 - startE1) - abs(currentE2 - startE2)), 255));
 
     int sensorDistance = sonar.ping_cm();
-    if(sensorDistance < 3 && sensorDistance!=0){
-      digitalWrite(LED_GREEN, 0);
-      digitalWrite(LED_RED, 0);
-      digitalWrite(LED_BLUE, 128);
-    }
-    else if(sensorDistance != 0){
+    if(sensorDistance != 0){
       digitalWrite(LED_GREEN, 128);
       digitalWrite(LED_RED, 0);
-      digitalWrite(LED_BLUE, 0);
     }
     else{
       digitalWrite(LED_RED, 128);
       digitalWrite(LED_GREEN, 0);
-      digitalWrite(LED_BLUE, 0);
     }
   
   }
@@ -154,6 +147,7 @@ void moveTo(int speed, int distance){
 
   digitalWrite(LED_RED, 0);
   digitalWrite(LED_GREEN, 0);
+  digitalWrite(LED_BLUE, 0);
 }
 
 void setup() {
@@ -171,6 +165,10 @@ void setup() {
 }
 
 void loop() {
+  digitalWrite(LED_RED, 0);
+  digitalWrite(LED_GREEN, 0);
+  digitalWrite(LED_BLUE, 0);
+  
   int *distance;
   do{
     free(distance);
@@ -205,6 +203,9 @@ void loop() {
   delay(1000);
   int betterDistance = sonar.ping_cm();
   moveTo(60, max(betterDistance,distance[minIndex]));
+
+  digitalWrite(LED_BLUE, 128);
+  
   Serial.print(betterDistance);
   free(distance);
   distance = NULL;
