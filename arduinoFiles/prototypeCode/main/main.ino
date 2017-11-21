@@ -15,17 +15,14 @@
 #define ENCODER_2A 5
 #define ENCODER_2B 6
 
-#define FORGETTING_FACTOR 0.9
+#define LED_GREEN 17
+#define LED_RED 18
+#define LED_BLUE 16
+
 #define SPEED_ADJUST_MULTIPLIER 5
 #define MEASURED_ENCODER_FULL_TURN 108.0
 
 NewPing sonar = NewPing(SENSOR1_TRIG, SENSOR1_ECHO, MAX_RANGE);
-
-void movingAverage(float inputValue, float *previousMovingAverage, float *previousWeight, const float forgettingFactor){
-    float currentMovingAverage = (*previousMovingAverage*forgettingFactor*(*previousWeight) + inputValue)/(forgettingFactor*(*previousWeight) + 1); //Calculate Current Moving Average
-    *previousMovingAverage = currentMovingAverage; //Sets value of Previous Moving Average pointer to Current Moving Average
-    *previousWeight = forgettingFactor*(*previousWeight) + 1.0; //Sets value of Previous Weight pointer to Current Weight
-}
 
 void takeMovingAverageInArray(int a[], int n){
   int *t = (int*)malloc(n*sizeof(int));
@@ -69,6 +66,10 @@ int* rotate(float angle, int speed, bool direction, bool scan){
   digitalWrite(9, LOW);
   digitalWrite(8, LOW);
   
+  digitalWrite(LED_RED, 0);
+  digitalWrite(LED_GREEN, 0);
+  digitalWrite(LED_BLUE, 0);
+  
   while(encoders_get_counts_m1()*(direction ? -1 : 1) < startE1*(direction ? -1 : 1) + (angle/360 * MEASURED_ENCODER_FULL_TURN) 
   || encoders_get_counts_m2()*(direction ? -1 : 1) > startE2*(direction ? -1 : 1) - (angle/360 * MEASURED_ENCODER_FULL_TURN)){
     
@@ -78,11 +79,25 @@ int* rotate(float angle, int speed, bool direction, bool scan){
     analogWrite(3, min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE2 - startE2) - abs(currentE1 - startE1)), 255));   
     analogWrite(11,min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE1 - startE1) - abs(currentE2 - startE2)), 255));
 
+    if(sonar.ping_cm() != 0){
+      digitalWrite(LED_GREEN, 128);
+      digitalWrite(LED_RED, 0);
+    }
+    else{
+      digitalWrite(LED_RED, 128);
+      digitalWrite(LED_GREEN, 0);
+    }
+    
     int currentEncoderChangeMin = min(abs(encoders_get_counts_m1() - startE1),abs(encoders_get_counts_m2() - startE2));
     distance[currentEncoderChangeMin] = sonar.ping_cm();
   }
   digitalWrite(9, HIGH);
   digitalWrite(8, HIGH);
+
+  digitalWrite(LED_RED, 0);
+  digitalWrite(LED_GREEN, 0);
+  digitalWrite(LED_BLUE, 0);
+  
   if(!scan){
     free(distance);
     distance = NULL;
@@ -104,16 +119,41 @@ void moveTo(int speed, int distance){
   digitalWrite(9, LOW);  
   digitalWrite(8, LOW);   
   
+  digitalWrite(LED_RED, 0);
+  digitalWrite(LED_GREEN, 0);
+  digitalWrite(LED_BLUE, 0);
+  
   while(((currentE1 - startE1) + (currentE2 - startE2))/2 < numSteps){
     currentE1 = encoders_get_counts_m1();
     currentE2 = encoders_get_counts_m2();
     
     analogWrite(3, min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE2 - startE2) - abs(currentE1 - startE1)), 255));   
     analogWrite(11,min(speed + SPEED_ADJUST_MULTIPLIER*(abs(currentE1 - startE1) - abs(currentE2 - startE2)), 255));
+
+    int sensorDistance = sonar.ping_cm();
+    if(sensorDistance < 3 && sensorDistance!=0){
+      digitalWrite(LED_GREEN, 0);
+      digitalWrite(LED_RED, 0);
+      digitalWrite(LED_BLUE, 128);
+    }
+    else if(sensorDistance != 0){
+      digitalWrite(LED_GREEN, 128);
+      digitalWrite(LED_RED, 0);
+      digitalWrite(LED_BLUE, 0);
+    }
+    else{
+      digitalWrite(LED_RED, 128);
+      digitalWrite(LED_GREEN, 0);
+      digitalWrite(LED_BLUE, 0);
+    }
+  
   }
   
   digitalWrite(9,HIGH);
   digitalWrite(8,HIGH);
+
+  digitalWrite(LED_RED, 0);
+  digitalWrite(LED_GREEN, 0);
 }
 
 void setup() {
@@ -125,6 +165,9 @@ void setup() {
   pinMode(13, OUTPUT); // Motor Channel A pin
   pinMode(8, OUTPUT);  // Brake Channel A pin
   encoders_init(ENCODER_1A, ENCODER_1B, ENCODER_2A, ENCODER_2B);
+  pinMode(LED_GREEN, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+  pinMode(LED_BLUE, OUTPUT);
 }
 
 void loop() {
@@ -167,8 +210,4 @@ void loop() {
   distance = NULL;
   
   delay(10000);
-  /*
-  moveTo(60, 15);
-  delay(10000);
-  */
 }
