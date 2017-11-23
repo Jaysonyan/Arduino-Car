@@ -14,6 +14,7 @@
 #define LED_GREEN 17
 #define LED_RED 18
 #define LED_BLUE 16
+#define BUZZER_PIN 19
 #define SPEED_ADJUST_MULTIPLIER 5
 #define MEASURED_ENCODER_FULL_TURN 108.0
 
@@ -162,6 +163,7 @@ void setup() {
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(LED_BLUE, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 }
 
 void loop() {
@@ -171,10 +173,11 @@ void loop() {
   int *distance;
   //Rotates car around until it finds an object
   do{
+    tone(BUZZER_PIN,1000,500);
+    delay(500);
     free(distance);
     distance = NULL;
     distance = rotate(360, 60, true, true);
-    delay(1000);
   } while(findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN) == -1);
 
   //Calibrates distance array to make zero-readings unfavourable to closest distance algorithm
@@ -206,6 +209,9 @@ void loop() {
   Serial.println(distance[minIndex]);
   Serial.println(((float)(MEASURED_ENCODER_FULL_TURN - minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0);
   
+  tone(BUZZER_PIN,1000,500);
+  delay(500);
+  
   //calculates how much the car must turn to be facing the closest object
   float rotationRequired = ((float)(minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0;
   rotate(360.0 - rotationRequired, 60, false, false);
@@ -221,5 +227,8 @@ void loop() {
   free(distance);
   distance = NULL;
   
-  delay(10000);
+  tone(BUZZER_PIN,1000,500);
+  delay(500);
+  
+  delay(1000);
 }
