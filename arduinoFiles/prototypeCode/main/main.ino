@@ -173,12 +173,12 @@ void loop() {
   int *distance;
   //Rotates car around until it finds an object
   do{
-    tone(BUZZER_PIN,1000,500);
     delay(500);
     free(distance);
     distance = NULL;
     distance = rotate(360, 60, true, true);
   } while(findIndexOfLowestNonZero(distance, MEASURED_ENCODER_FULL_TURN) == -1);
+  tone(BUZZER_PIN,1000,500);
 
   //Calibrates distance array to make zero-readings unfavourable to closest distance algorithm
   for(int i = 0; i < (int)(360.0/360.0 * MEASURED_ENCODER_FULL_TURN); i++){
@@ -209,7 +209,7 @@ void loop() {
   Serial.println(distance[minIndex]);
   Serial.println(((float)(MEASURED_ENCODER_FULL_TURN - minIndex))/MEASURED_ENCODER_FULL_TURN * 360.0);
   
-  tone(BUZZER_PIN,1000,500);
+  
   delay(500);
   
   //calculates how much the car must turn to be facing the closest object
@@ -226,9 +226,6 @@ void loop() {
   Serial.print(betterDistance);
   free(distance);
   distance = NULL;
-  
-  tone(BUZZER_PIN,1000,500);
-  delay(500);
-  
+    
   delay(1000);
 }
